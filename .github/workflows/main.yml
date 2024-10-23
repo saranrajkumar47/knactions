@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -48,24 +48,7 @@ jobs:
           kill $(cat server.pid)  # Kill the server using the saved PID
           rm server.pid  # Clean up the PID file
 
-      # Step 8: Upload Playwright HTML Report
-      - name: Upload Playwright HTML Report
-        if: always()  # Upload the report regardless of test outcomes
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-
-  build:
-    runs-on: ubuntu-latest
-    needs: test  # This job depends on the test job
-
-    steps:
-      # Step 1: Checkout the repository
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      # Step 2: Check test result and report status
+      # Step 8: Check test result and report status
       - name: Check test result and report status
         run: |
           if [ "${{ env.TEST_RESULT }}" -eq 0 ]; then
@@ -75,44 +58,44 @@ jobs:
             exit 1  # Exit with an error code to stop the workflow
           fi
 
-      # Step 3: Setup JFrog CLI for communication with JFrog Artifactory
+      # Step 9: Setup JFrog CLI for communication with JFrog Artifactory
       - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_URL: ${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
-      # Step 4: Configure JFrog for npm repositories
+      # Step 10: Configure JFrog for npm repositories
       - name: Set CLI Config
         run: jf npm-config --global=true --repo-resolve=cgdemo-virtual --repo-deploy=cgdemo-virtual
 
-      # Step 5: Install project dependencies using npm and JFrog CLI
+      # Step 11: Install project dependencies using npm and JFrog CLI
       - name: Install Deps using JFrog CLI
         run: jf npm install
 
-      # Step 6: Build the project
+      # Step 12: Build the project
       - name: Build Project
         run: npm run build
 
-      # Step 7: Get current timestamp to use in file names
+      # Step 13: Get current timestamp to use in file names
       - name: Get Current Timestamp
         id: vars
         run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
-      # Step 8: Archive the build directory into a .tgz file with a timestamp
+      # Step 14: Archive the build directory into a .tgz file with a timestamp
       - name: Archive Artifacts into TGZ with Timestamp
         run: tar -czf build_${{ env.TIMESTAMP }}.tgz build/
 
-      # Step 9: Push the compressed .tgz file to JFrog Artifactory
+      # Step 15: Push the compressed .tgz file to JFrog Artifactory
       - name: Push Artifacts to JFrog
         run: |
           jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz"
 
-      # Step 10: Publish the npm package to JFrog Artifactory
+      # Step 16: Publish the npm package to JFrog Artifactory
       - name: Publish npm package
         run: jf npm publish
 
-      # Step 11: Publish build information to JFrog
+      # Step 17: Publish build information to JFrog
       - name: Publish Build info With JFrog CLI
         run: |
           jf rt build-collect-env
