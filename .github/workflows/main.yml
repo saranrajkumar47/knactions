@@ -98,34 +98,28 @@ jobs:
 
       # Step 7: Build the project
       - name: Build Project
-        if: ${{ env.TEST_RESULT == 0 }}  # Only run if tests passed
         run: npm run build
 
       # Step 8: Get current timestamp to use in file names
       - name: Get Current Timestamp
-        if: ${{ env.TEST_RESULT == 0 }}  # Only run if tests passed
         id: vars
         run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
       # Step 9: Archive the build directory into a .tgz file with a timestamp
       - name: Archive Artifacts into TGZ with Timestamp
-        if: ${{ env.TEST_RESULT == 0 }}  # Only run if tests passed
         run: tar -czf build_${{ env.TIMESTAMP }}.tgz build/
 
       # Step 10: Push the compressed .tgz file to JFrog Artifactory
       - name: Push Artifacts to JFrog
-        if: ${{ env.TEST_RESULT == 0 }}  # Only run if tests passed
         run: |
           jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz"
 
       # Step 11: Publish the npm package to JFrog Artifactory
       - name: Publish npm package
-        if: ${{ env.TEST_RESULT == 0 }}  # Only run if tests passed
         run: jf npm publish
 
       # Step 12: Publish build information to JFrog
       - name: Publish Build info With JFrog CLI
-        if: ${{ env.TEST_RESULT == 0 }}  # Only run if tests passed
         run: |
           jf rt build-collect-env
           jf rt build-add-git
