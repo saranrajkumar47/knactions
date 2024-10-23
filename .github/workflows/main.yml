@@ -68,11 +68,11 @@ jobs:
       # Step 2: Check test result and report status
       - name: Check test result and report status
         run: |
-          if [ "${{ env.TEST_RESULT }}" == "0" ]; then
+          if [ "${{ env.TEST_RESULT }}" -eq 0 ]; then
             echo "Playwright tests passed, proceeding with the build."
           else
-            echo "Playwright tests failed, skipping the build."
-            exit 0  # Exit successfully but skip the rest of the steps
+            echo "Playwright tests failed, stopping the workflow."
+            exit 1  # Exit with an error code to stop the workflow
           fi
 
       # Step 3: Setup JFrog CLI for communication with JFrog Artifactory
