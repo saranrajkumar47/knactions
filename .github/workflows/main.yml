@@ -39,10 +39,23 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      # Step 4: Start server in the background
+      - name: Start the server
+        run: |
+          npm start &  # Run server in background
+          echo $! > server.pid  # Save the process ID (PID) for later termination
+
+      # Step 5: Run Playwright Tests
       - name: Run Playwright Tests
         run: npx playwright test --reporter=html
 
-      # Step 4: List and upload the test report
+      # Step 6: Kill the background server after tests complete
+      - name: Stop server
+        run: |
+          kill $(cat server.pid)  # Kill the server using the saved PID
+          rm server.pid  # Clean up the PID file
+
+      # Step 7: List and upload the test report
       - name: List report directory
         run: ls -R playwright-report  # List all files recursively in the report directory
 
