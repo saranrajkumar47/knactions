@@ -81,12 +81,16 @@ jobs:
         with:
           node-version: '20.x'
 
-      # Step 4: Build the project if tests passed
+      # Step 4: Install project dependencies using npm and JFrog CLI
+      - name: Install Deps using JFrog CLI
+        run: jf npm install
+
+      # Step 5: Build the project if tests passed
       - name: Build Project
         if: ${{ env.TEST_RESULT == 0 }}
         run: npm run build
 
-      # Step 5: Setup JFrog CLI for npm repositories
+      # Step 6: Setup JFrog CLI for npm repositories
       - name: Setup JFrog CLI
         if: ${{ env.TEST_RESULT == 0 }}
         uses: jfrog/setup-jfrog-cli@v3
@@ -94,15 +98,10 @@ jobs:
           JF_URL: ${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
-      # Step 6: Set CLI Config for JFrog npm repositories
+      # Step 7: Set CLI Config for JFrog npm repositories
       - name: Set CLI Config
         if: ${{ env.TEST_RESULT == 0 }}
         run: jf npm-config --global=true --repo-resolve=cgdemo-virtual --repo-deploy=cgdemo-virtual
-
-      # Step 7: Install dependencies using JFrog CLI
-      - name: Install Deps using JFrog CLI
-        if: ${{ env.TEST_RESULT == 0 }}
-        run: jf npm install
 
       # Step 8: Archive Artifacts into TGZ with Timestamp
       - name: Archive Artifacts into TGZ with Timestamp
