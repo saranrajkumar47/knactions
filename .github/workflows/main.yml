@@ -68,7 +68,7 @@ jobs:
       # Step 2: Check test result and report status
       - name: Check test result and report status
         run: |
-          if [ "${{ env.TEST_RESULT }}" -eq 0 ]; then
+          if [ "${{ env.TEST_RESULT }}" == "0" ]; then
             echo "Playwright tests passed, proceeding with the build."
           else
             echo "Playwright tests failed, skipping the build."
