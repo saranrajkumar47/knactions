@@ -42,13 +42,25 @@ jobs:
           echo "TEST_RESULT=$?" >> $GITHUB_ENV  # Store the exit code (0=pass, non-zero=fail)
         continue-on-error: true  # Continue even if tests fail
 
-      # Step 7: Stop the server
+      # Step 7: Check for failed tests
+      - name: Check for Failed Tests
+        id: check_failed
+        run: |
+          if grep -q '"status": "failed"' test-results/.last-run.json; then
+            echo "Tests have failed."
+            echo "failed=true" >> $GITHUB_ENV
+          else
+            echo "All tests passed."
+            echo "failed=false" >> $GITHUB_ENV
+          fi
+
+      # Step 8: Stop the server
       - name: Stop the server
         run: |
           kill $(cat server.pid)  # Kill the server using the saved PID
           rm server.pid  # Clean up the PID file
 
-      # Step 8: Upload Playwright HTML Report
+      # Step 9: Upload Playwright HTML Report
       - name: Upload Playwright HTML Report
         if: always()  # Upload the report regardless of test outcomes
         uses: actions/upload-artifact@v4
@@ -56,79 +68,10 @@ jobs:
           name: playwright-report
           path: playwright-report
 
-      # Step 9: Upload test results as an artifact
-      - name: Upload Test Results
-        if: always()
+      # Step 10: Upload Failed Test Results
+      - name: Upload Failed Test Results
+        if: env.failed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: test-results
-
-  build:
-    runs-on: ubuntu-latest
-    needs: test  # This ensures the build job waits for the test job to complete
-
-    if: success()  # This ensures the build job only runs if the test job was successful
-
-    steps:
-      # Step 1: Checkout the repository
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      # Step 2: Download test results
-      - name: Download Test Results
-        uses: actions/download-artifact@v3
-        with:
-          name: playwright-report
-
-      # Step 3: Check for "failed" in the test results
-      - name: Check Test Results
-        run: |
-          if grep -q '"status": "failed"' test-results/.last-run.json; then
-            echo "Playwright tests failed, stopping the build."
-            exit 1  # Exit with an error code to stop the build job
-          fi
-
-      # Step 4: Setup JFrog CLI for communication with JFrog Artifactory
-      - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v3
-        env:
-          JF_URL: ${{ secrets.JF_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-
-      # Step 5: Configure JFrog for npm repositories
-      - name: Set CLI Config
-        run: jf npm-config --global=true --repo-resolve=cgdemo-virtual --repo-deploy=cgdemo-virtual
-
-      # Step 6: Install project dependencies using npm and JFrog CLI
-      - name: Install Deps using JFrog CLI
-        run: jf npm install
-
-      # Step 7: Build the project
-      - name: Build Project
-        run: npm run build
-
-      # Step 8: Get current timestamp to use in file names
-      - name: Get Current Timestamp
-        id: vars
-        run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
-
-      # Step 9: Archive the build directory into a .tgz file with a timestamp
-      - name: Archive Artifacts into TGZ with Timestamp
-        run: tar -czf build_${{ env.TIMESTAMP }}.tgz build/
-
-      # Step 10: Push the compressed .tgz file to JFrog Artifactory
-      - name: Push Artifacts to JFrog
-        run: |
-          jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz"
-
-      # Step 11: Publish the npm package to JFrog Artifactory
-      - name: Publish npm package
-        run: jf npm publish
-
-      # Step 12: Publish build information to JFrog
-      - name: Publish Build info With JFrog CLI
-        run: |
-          jf rt build-collect-env
-          jf rt build-add-git
-          jf rt build-publish
+          name: failed-test-results
+          path: test-results/.last-run.json
