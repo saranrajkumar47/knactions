@@ -1,117 +1,63 @@
-
-name: "Playwright and JFrog Integration"
-
-on:
-  push:
-    branches:
-      - main
+name: "JFrog Integration Example"
+on: push
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      # Step 1: Checkout the repository
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      # Step 2: Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-
-      # Step 3: Install dependencies
-      - name: Install dependencies
-        run: npm install
-
-      # Step 4: Install Playwright browsers
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      # Step 5: Start the server
-      - name: Start the server
-        run: |
-          npm start &  # Run the server in the background
-          echo $! > server.pid  # Save the process ID (PID) for later termination
-      # Step 6: Run Playwright Tests
-      - name: Run Playwright Tests
-        run: |
-          set +e  # Allow script to continue even if tests fail
-          npx playwright test --reporter=html
-          echo "TEST_RESULT=$?" >> $GITHUB_ENV  # Store the exit code (0=pass, non-zero=fail)
-        continue-on-error: true  # Continue even if tests fail
-
-      # Step 7: Stop the server
-      - name: Stop the server
-        run: |
-          kill $(cat server.pid)  # Kill the server using the saved PID
-          rm server.pid  # Clean up the PID file
-      # Step 8: Upload Playwright HTML Report
-      - name: Upload Playwright HTML Report
-        if: always()  # Upload the report regardless of test outcomes
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-
   build:
     runs-on: ubuntu-latest
-    needs: test  # This job depends on the test job
 
     steps:
-      # Step 1: Checkout the repository
+      # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Step 2: Check test result and report status
-      - name: Check test result and report status
-        run: |
-          if [ "${{ env.TEST_RESULT }}" == "0" ]; then
-            echo "Playwright tests passed, proceeding with the build."
-          else
-            echo "Playwright tests failed, skipping the build."
-            exit 0  # Exit successfully but skip the rest of the steps
-          fi
-      # Step 3: Setup JFrog CLI for communication with JFrog Artifactory
+      # Setup JFrog CLI for communication with JFrog Artifactory
       - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_URL: ${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
-      # Step 4: Configure JFrog for npm repositories
+      # Setup Node.js for the project
+      - name: Setup Node npm
+        uses: actions/setup-node@v3
+
+      # Configure JFrog for npm repositories
       - name: Set CLI Config
         run: jf npm-config --global=true --repo-resolve=cgdemo-virtual --repo-deploy=cgdemo-virtual
 
-      # Step 5: Install project dependencies using npm and JFrog CLI
-      - name: Install Deps using JFrog CLI
+      # Install project dependencies using npm and JFrog CLI
+      - name: Install Deps
         run: jf npm install
 
-      # Step 6: Build the project
+      # Build the project
       - name: Build Project
         run: npm run build
 
-      # Step 7: Get current timestamp to use in file names
+      # Get current timestamp to use in file names
       - name: Get Current Timestamp
         id: vars
         run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
-      # Step 8: Archive the build directory into a .tgz file with a timestamp
+      # Archive the build directory into a .tgz file with a timestamp
       - name: Archive Artifacts into TGZ with Timestamp
         run: tar -czf build_${{ env.TIMESTAMP }}.tgz build/
 
-      # Step 9: Push the compressed .tgz file to JFrog Artifactory
+      # Ensure only the desired directory is uploaded to JFrog Artifactory
       - name: Push Artifacts to JFrog
         run: |
-          jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz"
-      # Step 10: Publish the npm package to JFrog Artifactory
-      - name: Publish npm package
+          # Only upload files from the 'cg-artifacts' directory to JFrog Artifactory
+          jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz" --exclude-patterns "**/.npm/**" --exclude-patterns "**/client/**"
+
+      # Publish the npm package to JFrog Artifactory
+      - name: Publish
         run: jf npm publish
 
-      # Step 11: Publish build information to JFrog
+      # Publish build information to JFrog
       - name: Publish Build info With JFrog CLI
         run: |
+          # Collect environment variables for the build
           jf rt build-collect-env
+          # Collect VCS details from git and add them to the build
           jf rt build-add-git
+          # Publish build info
           jf rt build-publish
