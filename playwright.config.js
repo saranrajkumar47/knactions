@@ -18,6 +18,6 @@ module.exports = defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:3000', // base URL for the tests
-    headless: true, // Show browser window during tests (set to true for headless)
+    headless: false, // Show browser window during tests (set to true for headless)
   },
 });
