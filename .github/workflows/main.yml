@@ -42,9 +42,9 @@ jobs:
       - name: Archive Artifacts into TGZ with Timestamp
         run: tar -czf build_${{ env.TIMESTAMP }}.tgz -C build .
         
-      # Push the compressed .tgz file to JFrog Artifactory (exclude unnecessary directories)
+      # Push the compressed .tgz file to JFrog Artifactory and exclude unnecessary directories
       - name: Push Artifacts to JFrog
-        run: jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz" --flat --exclude-patterns "**/.npm/**;**/client/**"
+        run: jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz" --flat --exclusions="**/.npm/**;**/client/**"
         
       # Publish the npm package to JFrog Artifactory
       - name: Publish
