@@ -40,7 +40,6 @@ jobs:
           set +e  # Allow script to continue even if tests fail
           npx playwright test --reporter=html
           echo "TEST_RESULT=$?" >> $GITHUB_ENV  # Store the exit code (0=pass, non-zero=fail)
-        continue-on-error: true  # Continue even if tests fail
 
       # Step 7: Stop the server
       - name: Stop the server
