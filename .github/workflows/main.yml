@@ -79,7 +79,7 @@ jobs:
       - name: Download Test Results
         uses: actions/download-artifact@v3
         with:
-          name: test-results
+          name: playwright-report
 
       # Step 3: Check for "failed" in the test results
       - name: Check Test Results
