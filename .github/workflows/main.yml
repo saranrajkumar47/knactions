@@ -38,15 +38,13 @@ jobs:
         id: vars
         run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
         
-      # Archive the build directory into a .tgz file with a timestamp
+      # Archive the build directory into a .tgz file with a timestamp (ensure you're archiving only the needed files)
       - name: Archive Artifacts into TGZ with Timestamp
-        run: tar -czf build_${{ env.TIMESTAMP }}.tgz build/
+        run: tar -czf build_${{ env.TIMESTAMP }}.tgz -C build .
         
-      # Push the compressed .tgz file to JFrog Artifactory
+      # Push the compressed .tgz file to JFrog Artifactory (exclude unnecessary directories)
       - name: Push Artifacts to JFrog
-        run: |
-          # Only upload files from the 'cg-artifacts' directory to JFrog Artifactory and exclude unnecessary files
-          jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz" --exclusions "**/.npm/**;**/client/**"
+        run: jf rt u "build_${{ env.TIMESTAMP }}.tgz" "cgdemo-virtual/cg-artifacts/build_${{ env.TIMESTAMP }}.tgz" --flat --exclude-patterns "**/.npm/**;**/client/**"
         
       # Publish the npm package to JFrog Artifactory
       - name: Publish
